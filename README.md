@@ -178,6 +178,18 @@ Designed for research, academic demonstrations, and FPGA-based edge AI accelerat
 
 ---
 
-## 📄 License
+## Project Structure
 
-Specify your license here (MIT / Apache 2.0 / Custom Academic License).
+The repository is organized to clearly separate hardware design, embedded software, dataset, and evaluation results.
+
+.
+├── CNN_BLOCK_DESIGN/     # HLS-based mixed-precision MAC architecture
+├── cnn/                  # CNN accelerator integration logic
+├── cnn_platform/         # Vivado Zynq platform (PS + PL design)
+├── cnn_app/              # Embedded runtime application (UART + control)
+├── archive/              # Complete dataset (models, weights, inputs)
+├── results/              # Quantization reports and performance outputs
+├── archive.zip           # Compressed dataset backup
+├── .gitignore            # Git ignored files configuration
+└── README.md             # Project documentation
+
