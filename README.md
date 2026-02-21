@@ -181,7 +181,8 @@ Designed for research, academic demonstrations, and FPGA-based edge AI accelerat
 ## Project Structure
 
 The repository is organized to clearly separate hardware design, embedded software, dataset, and evaluation results.
-'''
+
+```
 .
 ├── CNN_BLOCK_DESIGN/     # HLS-based mixed-precision MAC architecture
 ├── cnn/                  # CNN accelerator integration logic
@@ -192,5 +193,5 @@ The repository is organized to clearly separate hardware design, embedded softwa
 ├── archive.zip           # Compressed dataset backup
 ├── .gitignore            # Git ignored files configuration
 └── README.md             # Project documentation
-'''
+```
 
