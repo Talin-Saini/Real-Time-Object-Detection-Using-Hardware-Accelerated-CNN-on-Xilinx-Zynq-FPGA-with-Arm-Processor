@@ -1,15 +1,33 @@
-# Mixed-Precision Quantization & FPGA Inference Framework
+# Mixed-Precision Quantization for Real-Time Object Detection on Xilinx Zynq FPGA
 
-An end-to-end workflow for evaluating, converting, and deploying neural network models using **layer-wise mixed-precision quantization** on an FPGA accelerator.
+This repository implements the mixed-precision quantization and FPGA inference engine used in the project:
 
-This framework dynamically determines whether a model — or individual layers — can be quantized to **INT8, INT6, INT4, or INT2** while maintaining acceptable signal fidelity.  
-The quantized model is executed on an **HLS-based dynamic MAC architecture** optimized for DSP and memory efficiency.
+**Real-Time Object Detection Using Hardware-Accelerated CNN on Xilinx Zynq FPGA with ARM Processor**
+
+The framework enables efficient deployment of the object detection CNN model by dynamically selecting layer-wise precision (INT8 / INT6 / INT4 / INT2), optimizing DSP utilization, and minimizing memory bandwidth while preserving detection accuracy.
+
+It serves as the precision optimization and hardware acceleration backbone of the real-time detection pipeline deployed on the Zynq SoC.
 
 ---
 
 ## Objective
 
-Maximize compute density and memory efficiency while preserving numerical accuracy.
+Enable real-time object detection on the Zynq platform by maximizing compute density and memory efficiency while maintaining numerical fidelity and detection accuracy.
+
+---
+
+## System Overview
+
+The framework performs:
+
+- Automatic per-layer quantization feasibility analysis  
+- Layer-wise mixed-precision assignment  
+- Bit-packed weight storage generation  
+- Metadata-driven runtime configuration  
+- Deployment to an HLS-based dynamic MAC accelerator  
+- Embedded execution via ARM processor with UART interface  
+
+The design ensures efficient hardware utilization while maintaining model integrity.
 
 ---
 
@@ -17,58 +35,58 @@ Maximize compute density and memory efficiency while preserving numerical accura
 
 - Automatic quantization feasibility analysis  
 - Layer-wise mixed precision (INT8 / INT6 / INT4 / INT2)  
-- SNR-based validation (≥ 40 dB)  
-- Efficient bit-packed weight storage  
-- Binary-to-C weight conversion support  
-- Dynamic DSP utilization in HLS  
-- Layer-wise runtime configuration using metadata  
-- End-to-end Python → FPGA deployment pipeline  
+- SNR-based validation (≥ 40 dB threshold)  
+- Bit-packed weight compression  
+- Binary-to-C conversion utilities  
+- DSP-aware dynamic MAC architecture  
+- Runtime layer-wise precision configuration  
+- End-to-end Python to FPGA deployment pipeline  
 - UART-based hardware testing  
 
 ---
 
-##  Quantization Feasibility Check
+## Quantization Feasibility Check
 
-Each layer is evaluated independently before deployment.
+Each CNN layer is evaluated independently before deployment.
 
-###  Acceptance Criteria
+### Acceptance Criteria
 
 A layer is eligible for quantization if:
 
-- **SNR ≥ 40 dB**
-- **≥ 99% of weights lie within the representable quantization range**
+- Signal-to-Noise Ratio (SNR) ≥ 40 dB  
+- At least 99% of weights lie within the representable quantization range  
 
-If satisfied, the layer is assigned the **lowest possible precision** among:
+If these criteria are satisfied, the layer is assigned the lowest feasible precision among:
 
 - INT8  
 - INT6  
 - INT4  
 - INT2  
 
-This enables aggressive compression without unacceptable signal degradation.
+This ensures aggressive compression without unacceptable signal degradation.
 
 ---
 
-## Layer-wise Mixed Precision
+## Layer-wise Mixed Precision Strategy
 
-Different layers may use different bit-widths based on sensitivity.
+Different layers exhibit different sensitivity to quantization. The framework assigns precision accordingly.
 
 ### Example Strategy
 
-| Layer Type | Precision |
-|------------|-----------|
-| Early / Sensitive Layers | INT8 |
-| Moderately Robust Layers | INT6 |
-| Robust Layers | INT4 / INT2 |
+| Layer Type                  | Assigned Precision |
+|-----------------------------|-------------------|
+| Early / Sensitive Layers    | INT8              |
+| Moderately Robust Layers    | INT6              |
+| Robust Layers               | INT4 / INT2       |
 
 ### Benefits
 
-- Improved overall accuracy  
+- Improved overall detection accuracy  
 - Reduced memory footprint  
 - Higher effective DSP utilization  
-- Flexible per-layer optimization  
+- Precision-aware hardware efficiency  
 
-Each layer is stored independently and processed according to its assigned precision.
+Each layer is stored and processed independently based on its assigned bit-width.
 
 ---
 
@@ -77,104 +95,94 @@ Each layer is stored independently and processed according to its assigned preci
 The conversion workflow performs:
 
 1. Per-layer quantization based on feasibility analysis  
-2. Storage of each layer in separate binary files  
-3. Generation of a metadata file containing:
+2. Storage of each layer as separate binary files  
+3. Generation of metadata containing:
    - Layer dimensions  
    - Bit-width  
-   - Scaling information  
-   - Layer ordering  
+   - Scaling factors  
+   - Execution order  
 
-This enables flexible layer-wise loading and execution on FPGA hardware.
+This enables flexible, runtime-configurable execution on FPGA hardware.
 
 ---
 
 ## Bit Packing Scheme
 
-Weights are bit-packed to minimize storage and memory bandwidth.
+Weights are packed to minimize storage and memory bandwidth.
 
-| Precision | Storage Format |
-|------------|----------------|
-| INT2 | 4 weights per byte |
-| INT4 | 2 weights per byte |
-| INT6 | 4 weights in 3 bytes |
-| INT8 | 1 weight per byte |
+| Precision | Storage Format              |
+|------------|----------------------------|
+| INT2       | 4 weights per byte         |
+| INT4       | 2 weights per byte         |
+| INT6       | 4 weights in 3 bytes       |
+| INT8       | 1 weight per byte          |
 
-A conversion utility is included to generate **C-compatible representations** for embedded/HLS integration.
+A conversion utility generates C-compatible arrays for HLS and embedded integration.
 
 ---
 
-##  Hardware Architecture (HLS)
+## Hardware Architecture (HLS)
 
 ### Dynamic MAC Design
 
-The accelerator adapts DSP usage based on precision:
+The accelerator adapts DSP utilization based on layer precision.
 
-| Precision | DSP Strategy |
-|------------|--------------|
-| INT8 | One MAC per DSP |
-| INT6 | Approximate multiplier implementation |
-| INT4 | Two MACs packed per DSP |
-| INT2 | Four MACs packed per DSP |
+| Precision | DSP Utilization Strategy                     |
+|------------|----------------------------------------------|
+| INT8       | One MAC per DSP                              |
+| INT6       | Approximate multiplier implementation         |
+| INT4       | Two MAC operations packed per DSP            |
+| INT2       | Four MAC operations packed per DSP           |
 
-This enables **precision-scalable compute density** without modifying the hardware architecture.
+This precision-scalable architecture enables increased compute density without modifying the hardware structure.
 
 ---
 
-##  Runtime Execution Flow
+## Runtime Execution Flow
 
-The embedded application performs:
+The embedded ARM application performs:
 
 1. Receive input data via UART  
 2. Parse model metadata  
-3. Load layer weights dynamically  
+3. Dynamically load layer weights  
 4. Configure computation precision per layer  
-5. Execute layers sequentially on the accelerator  
-6. Transmit output results via UART  
+5. Execute layers sequentially on the FPGA accelerator  
+6. Transmit detection output via UART  
 
-This allows model updates and testing **without FPGA re-synthesis**.
+This design allows model updates without FPGA re-synthesis.
 
 ---
+
 ## Performance Goals
 
-- Minimize memory usage via ultra-low-bit quantization  
-- Increase effective DSP throughput via computation packing  
-- Enable flexible precision scaling across layers  
-- Maintain signal fidelity using SNR-based validation  
+- Minimize memory usage through ultra-low-bit quantization  
+- Increase effective DSP throughput through computation packing  
+- Enable flexible precision scaling across CNN layers  
+- Maintain signal fidelity through SNR-based validation  
+- Support real-time object detection constraints  
 
 ---
 
-##  Future Improvements
+## Future Improvements
 
-- USB / OTG data transfer for higher throughput  
+- USB / OTG-based high-speed data transfer  
 - Activation quantization support  
-- Direct ONNX integration  
-- Latency and throughput benchmarking  
-- AXI-based high-speed data interfaces  
+- Direct ONNX model integration  
+- Latency and throughput benchmarking framework  
+- AXI-based high-bandwidth data interfaces  
 
 ---
 
 ## Toolchain Overview
 
-| Stage | Tool |
-|-------|------|
-| Quantization & Validation | Python |
-| Bit Packing & Conversion | Python Utilities |
-| Hardware Design | Vitis HLS |
-| FPGA Deployment | Vivado / SDK |
-| Runtime Interface | UART |
-
----
-
-## Summary
-
-This framework provides a **precision-adaptive FPGA inference system** capable of:
-
-- Dynamic per-layer quantization  
-- Efficient memory utilization  
-- Scalable DSP packing  
-- End-to-end deployment workflow  
-
-Designed for research, academic demonstrations, and FPGA-based edge AI acceleration.
+| Stage                         | Tool              |
+|--------------------------------|------------------|
+| Quantization & Validation     | Python            |
+| Bit Packing & Conversion      | Python Utilities  |
+| Hardware Design               | Vitis HLS         |
+| Platform Integration          | Vivado            |
+| Embedded Application          | ARM (SDK/Vitis)   |
+| Runtime Communication         | UART              |
 
 ---
 
